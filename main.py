@@ -31,7 +31,7 @@ def get_klines(symbol, interval, limit):
     return df
 
 def check_signal(df):
-    rsi = ta.rsi(df["close"], length=RSI_LENGTH)
+    rsi = ta.momentum.RSIIndicator(df["close"], window=RSI_LENGTH).rsi()
     prev_rsi = rsi.iloc[-2]
     last_rsi = rsi.iloc[-1]
 
