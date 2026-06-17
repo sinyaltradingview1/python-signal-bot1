@@ -1,7 +1,7 @@
 import os
 import requests
 import pandas as pd
-import pandas_ta as ta
+import ta
 from datetime import datetime, timezone
 
 # Token & Chat ID dari GitHub Secrets (aman)
