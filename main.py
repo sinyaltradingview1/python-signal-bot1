@@ -15,7 +15,7 @@ VS_CURRENCY = "usd"
 INTERVAL_MINUTES = 15            # Interval candle dalam menit (15m)
 LIMIT = 100                      # Jumlah candle
 RSI_LENGTH = 14
-RSI_OVERSOLD = 30
+RSI_OVERSOLD = 99
 RSI_OVERBOUGHT = 70
 
 # ================== FUNGSI ==================
