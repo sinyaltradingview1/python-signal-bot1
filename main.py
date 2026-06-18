@@ -13,7 +13,7 @@ PAIR = "XBTUSD"            # Kraken pair: XBTUSD (Bitcoin), ETHUSD, SOLUSD, dll.
 INTERVAL = 15              # menit: 1, 5, 15, 30, 60, 240, 1440
 LIMIT = 100                # jumlah candle
 RSI_LENGTH = 14
-RSI_OVERSOLD = 30
+RSI_OVERSOLD = 99
 RSI_OVERBOUGHT = 70
 
 # =============== FUNGSI ===============
