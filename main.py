@@ -8,15 +8,13 @@ from datetime import datetime, timezone
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-# --- KONFIGURASI SINYAL ---
-PAIR = "XBTUSD"            # Kraken pair: XBTUSD (Bitcoin), ETHUSD, SOLUSD, dll.
-INTERVAL = 15              # menit: 1, 5, 15, 30, 60, 240, 1440
-LIMIT = 100                # jumlah candle
+# --- KONFIGURASI SINYAL (TES) ---
+PAIR = "XXBTZUSD"           # Bitcoin
+INTERVAL = 15               # menit
+LIMIT = 100
 RSI_LENGTH = 14
-RSI_OVERSOLD = 99
+RSI_OVERSOLD = 99           # DIBUAT TINGGI UNTUK TES
 RSI_OVERBOUGHT = 70
-
-# =============== FUNGSI ===============
 
 def get_klines(pair, interval, limit):
     url = "https://api.kraken.com/0/public/OHLC"
@@ -24,14 +22,18 @@ def get_klines(pair, interval, limit):
     resp = requests.get(url, params=params)
     resp.raise_for_status()
     data = resp.json()
-    # Ambil data candle dari hasil
-    ohlc = data["result"][pair]
+    if data["error"]:
+        raise Exception(f"Kraken API error: {data['error']}")
+    result = data["result"]
+    if not result:
+        raise Exception(f"Tidak ada data untuk pasangan {pair}")
+    ohlc_key = list(result.keys())[0]
+    ohlc = result[ohlc_key]
     df = pd.DataFrame(ohlc, columns=[
         "time", "open", "high", "low", "close", "vwap", "volume", "count"
     ])
     df["close"] = pd.to_numeric(df["close"])
     df["time"] = pd.to_datetime(df["time"], unit="s")
-    # Ambil LIMIT terakhir
     df = df.tail(limit).reset_index(drop=True)
     return df
 
@@ -39,11 +41,8 @@ def check_signal(df):
     rsi = ta.momentum.RSIIndicator(df["close"], window=RSI_LENGTH).rsi()
     prev_rsi = rsi.iloc[-2]
     last_rsi = rsi.iloc[-1]
-
     if pd.isna(prev_rsi) or pd.isna(last_rsi):
         return None, None
-
-    # --- SINI KAMU BISA EDIT LOGIKA SINYAL SENDIRI ---
     if prev_rsi < RSI_OVERSOLD and last_rsi >= RSI_OVERSOLD:
         return "BUY", last_rsi
     elif prev_rsi > RSI_OVERBOUGHT and last_rsi <= RSI_OVERBOUGHT:
