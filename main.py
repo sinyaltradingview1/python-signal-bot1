@@ -8,13 +8,10 @@ from datetime import datetime, timezone
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-# --- KONFIGURASI SINYAL (TES) ---
-PAIR = "XXBTZUSD"           # Bitcoin
-INTERVAL = 15               # menit
+# --- KONFIGURASI ---
+PAIR = "XXBTZUSD"
+INTERVAL = 15
 LIMIT = 100
-RSI_LENGTH = 14
-RSI_OVERSOLD = 99           # DIBUAT TINGGI UNTUK TES
-RSI_OVERBOUGHT = 70
 
 def get_klines(pair, interval, limit):
     url = "https://api.kraken.com/0/public/OHLC"
@@ -38,16 +35,8 @@ def get_klines(pair, interval, limit):
     return df
 
 def check_signal(df):
-    rsi = ta.momentum.RSIIndicator(df["close"], window=RSI_LENGTH).rsi()
-    prev_rsi = rsi.iloc[-2]
-    last_rsi = rsi.iloc[-1]
-    if pd.isna(prev_rsi) or pd.isna(last_rsi):
-        return None, None
-    if prev_rsi < RSI_OVERSOLD and last_rsi >= RSI_OVERSOLD:
-        return "BUY", last_rsi
-    elif prev_rsi > RSI_OVERBOUGHT and last_rsi <= RSI_OVERBOUGHT:
-        return "SELL", last_rsi
-    return None, last_rsi
+    # TEST MODE - selalu kirim sinyal BUY
+    return "BUY", 99.9
 
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -62,20 +51,17 @@ def main():
     try:
         df = get_klines(PAIR, INTERVAL, LIMIT)
         action, rsi_val = check_signal(df)
-        if action:
-            price = df["close"].iloc[-1]
-            candle_time = df["time"].iloc[-1].strftime("%Y-%m-%d %H:%M UTC")
-            msg = (
-                f"🚨 *Sinyal {action} {PAIR}*\n"
-                f"Harga: {price:.2f} USD\n"
-                f"RSI: {rsi_val:.1f}\n"
-                f"TF: {INTERVAL}menit\n"
-                f"Candle: {candle_time}"
-            )
-            send_telegram(msg)
-            print(f"✅ Sinyal terkirim: {action}")
-        else:
-            print(f"ℹ️ Tidak ada sinyal. RSI = {rsi_val:.1f}")
+        price = df["close"].iloc[-1]
+        candle_time = df["time"].iloc[-1].strftime("%Y-%m-%d %H:%M UTC")
+        msg = (
+            f"🚨 *TEST SINYAL {action} {PAIR}*\n"
+            f"Harga: {price:.2f} USD\n"
+            f"RSI: {rsi_val:.1f}\n"
+            f"TF: {INTERVAL}menit\n"
+            f"Candle: {candle_time}"
+        )
+        send_telegram(msg)
+        print(f"✅ Sinyal terkirim: {action}")
     except Exception as e:
         print("Error:", e)
 
