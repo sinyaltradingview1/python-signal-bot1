@@ -1,14 +1,12 @@
 import os
 import requests
 import pandas as pd
-import ta
 from datetime import datetime, timezone
+from signals.rsi_signal import check_rsi
+from signals.volume_spike import check_volume_spike
 
-# --- SECRETS ---
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
-
-# --- KONFIGURASI ---
 PAIR = "XXBTZUSD"
 INTERVAL = 15
 LIMIT = 100
@@ -30,13 +28,10 @@ def get_klines(pair, interval, limit):
         "time", "open", "high", "low", "close", "vwap", "volume", "count"
     ])
     df["close"] = pd.to_numeric(df["close"])
+    df["volume"] = pd.to_numeric(df["volume"])
     df["time"] = pd.to_datetime(df["time"], unit="s")
     df = df.tail(limit).reset_index(drop=True)
     return df
-
-def check_signal(df):
-    # TEST MODE - selalu kirim sinyal BUY
-    return "BUY", 99.9
 
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -50,18 +45,34 @@ def main():
     print(f"[{datetime.now(timezone.utc)}] Fetching {PAIR} {INTERVAL}min...")
     try:
         df = get_klines(PAIR, INTERVAL, LIMIT)
-        action, rsi_val = check_signal(df)
-        price = df["close"].iloc[-1]
-        candle_time = df["time"].iloc[-1].strftime("%Y-%m-%d %H:%M UTC")
-        msg = (
-            f"🚨 *TEST SINYAL {action} {PAIR}*\n"
-            f"Harga: {price:.2f} USD\n"
-            f"RSI: {rsi_val:.1f}\n"
-            f"TF: {INTERVAL}menit\n"
-            f"Candle: {candle_time}"
-        )
-        send_telegram(msg)
-        print(f"✅ Sinyal terkirim: {action}")
+        all_signals = []
+        all_signals.extend(check_rsi(df))
+        all_signals.extend(check_volume_spike(df))
+        # nanti tinggal tambah all_signals.extend(check_ema(df)) dll.
+
+        for s in all_signals:
+            if "rsi" in s:
+                msg = (
+                    f"🚨 *{s['type']} {PAIR}*\n"
+                    f"Harga: {s['price']:.2f} USD\n"
+                    f"RSI: {s['rsi']:.1f}\n"
+                    f"TF: {INTERVAL}menit\n"
+                    f"Candle: {s['candle_time'].strftime('%Y-%m-%d %H:%M UTC')}"
+                )
+            else:
+                msg = (
+                    f"📊 *{s['type']} {PAIR}*\n"
+                    f"Harga: {s['price']:.2f} USD\n"
+                    f"Volume: {s['volume']:.2f}\n"
+                    f"Rasio vs Avg: {s['ratio']:.1f}x\n"
+                    f"TF: {INTERVAL}menit\n"
+                    f"Candle: {s['candle_time'].strftime('%Y-%m-%d %H:%M UTC')}"
+                )
+            send_telegram(msg)
+            print(f"✅ Terkirim: {s['type']}")
+
+        if not all_signals:
+            print("ℹ️ Tidak ada sinyal terpicu.")
     except Exception as e:
         print("Error:", e)
 
